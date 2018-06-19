@@ -12,5 +12,5 @@ gp.output(7,False)
 gp.output(11,False)
 gp.output(12,True)
 
-cmd="raspistill -o capture_First.jpg"
+cmd="raspistill -o capture_First1.jpg"
 os.system(cmd)
