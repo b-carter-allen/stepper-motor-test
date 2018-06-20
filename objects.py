@@ -28,11 +28,12 @@ class Periodic_Scheduler(object):
 
 class Operation_Input(object):
 
-	def __init__(self, n_vials, steps, time, n_reps):
+	def __init__(self, n_vials, steps, time, n_reps, store_path):
 		self.n_vials = n_vials
 		self.steps = steps
 		self.time = time
 		self.n_reps = n_reps
+		self.store_path = store_path
 
 		self.max_op_len = 0.0 # max operation length float value in minutes
 

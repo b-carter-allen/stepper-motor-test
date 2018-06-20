@@ -3,6 +3,7 @@ import datetime, time
 import objects as ob
 from Adafruit_MotorHAT import Adafruit_MotorHAT, Adafruit_DCMotor, Adafruit_StepperMotor
 import RPi.GPIO as GPIO
+import os
 
 ## Variables ##
 
@@ -74,7 +75,7 @@ def take_picture_cameras(file):
     GPIO.output(camera_pins[0],False)
     GPIO.output(camera_pins[1],False)
     GPIO.output(camera_pins[2],True)
-    timestr1 = time.strftime("C1_D%Y_%m_%d-T%H_%M_%S")
+    timestr1 = time.strftime("/C1_D%Y_%m_%d-T%H_%M_%S")
     #make_dir=time.strftime("Camera1_D_%Y_%m_%d_T_%H_%M")
     capture1="raspistill -o %s.jpg" % (file+timestr1)
     os.system(capture1)
@@ -82,7 +83,7 @@ def take_picture_cameras(file):
     GPIO.output(camera_pins[0],True)
     GPIO.output(camera_pins[1],False)
     GPIO.output(camera_pins[2],True)
-    timestr2 = time.strftime("C2_D%Y_%m_%d-T%H_%M_%S")
+    timestr2 = time.strftime("/C2_D%Y_%m_%d-T%H_%M_%S")
     capture2 = "raspistill -o %s.jpg" % (file+timestr2)
     os.system(capture2)
     print("Camera 2 Capture Successful")
@@ -99,8 +100,28 @@ def input_cmd(): ## returns object with parameters
 	steps = int(input("Number of pictures per vial: "))
 	time = float(input("Length of Operation (mins): "))
 	n_reps = int(input("Number of repetitions in length of operation: "))
+    store_path = str(input("Path: "))
 
-	return ob.Operation_Input(n_vials, steps, time, n_reps)
+	return ob.Operation_Input(n_vials, steps, time, n_reps, store_path)
+_
+def root_file_gen(newpath):
+    root_folder = time.strftime("/Run_%Y_%m_%d-%H:%M")
+    if not os.path.exists(newpath + root_folder):
+        os.makedirs(newpath + root_folder)
+
+    return (newpath + rootfolder)
+
+def vial_file_gen(rootpath, n_vial):
+    vial_folder = ("/Vial_" + str(n_vial))
+    if not os.path.exists(rootpath + vial_folder):
+        os.makedirs(rootpath + vial_folder)
+
+    return (rootpath + vial_folder)
+
+def run_file_gen(vialpath, n_run)
+    run_folder = ("/Time_" + str(n_run))
+    if not os.path.exists(vialpath + run_folder):
+        os.makedirs(vialpath + run_folder)
 
 
 def operation(input_ob):
@@ -108,16 +129,19 @@ def operation(input_ob):
 	steps = input_ob.steps
 	time = input_ob.time
 	n_reps = input_ob.n_reps
+    rootpath = root_file_gen(input_ob.store_path)
 	interval = math.floor(200 / steps)
 	for i in range(n_vials):
-            next_endstop_number=2+i
-            for j in range(steps):
-                take_picture()
-                rotate_vial(interval)
-                if i == n_vials-1:
-                    reset_linear_platform()
-                else:
-                    move_linear_platform(next_endstop_number)	
+        vialpath = vial_file_gen(rootpath, n_vials + 1)    
+        next_endstop_number=2+i
+        for j in range(steps):
+            runpath = run_file_gen(vialpath, steps + 1)
+            take_picture_cameras(runpath)
+            rotate_vial(interval)
+            if i == n_vials-1:
+                reset_linear_platform()
+            else:
+                move_linear_platform(next_endstop_number)	
 	print ("rep complete")
 
 def main():
