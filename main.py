@@ -22,9 +22,9 @@ for i in range(6):
 # create a default object, no changes to I2C address or frequency
 mh = Adafruit_MotorHAT(addr = 0x60)
 LinearMotor = mh.getStepper(200, 1)
-LinearMotor.setSpeed(5)
+LinearMotor.setSpeed(30)
 RotaryMotor = mh.getStepper(200,2)
-RotaryMotor.setSpeed(5)
+RotaryMotor.setSpeed(2)
 
 
 ## Temp Test Functions ##
@@ -47,24 +47,20 @@ def move_linear_platform(endstop_number):
     if detect(endstop_pins[5])== 1:
         turnOffMotors()
     while detect(endstop)== 0:
-        LinearMotor.oneStep(Adafruit_MotorHAT.BACKWARD, Adafruit_MotorHAT.MICROSTEP)
+        LinearMotor.oneStep(Adafruit_MotorHAT.BACKWARD, Adafruit_MotorHAT.INTERLEAVE)
     while detect(endstop)== 1:
-        LinearMotor.oneStep(Adafruit_MotorHAT.BACKWARD, Adafruit_MotorHAT.MICROSTEP)
+        LinearMotor.oneStep(Adafruit_MotorHAT.BACKWARD, Adafruit_MotorHAT.INTERLEAVE)
     turnOffMotors()
     print ("Platform Centered")
 
 def reset_linear_platform():
-    endstop_pins=[17,27,22,18,23,24]
-    GPIO.setmode(GPIO.BCM)
-    for i in range(6):
-        GPIO.setup(endstop_pins[i], GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    endstop=endstop_pins[endstop_number - 1]
-    if detect(endstop_pins[0])== True:
+    if detect(endstop_pins[0])== 1:
+        print("At endstop 1")
         turnOffMotors()
-    while detect(endstop_pins[0])==False:
-        LinearMotor.oneStep(Adafruit_MotorHAT.FORWARD, Adafruit_MotorHAT.MICROSTEP)
-    while detect(endstop_pins[0])==True:
-        LinearMotor.oneStep(Adafruit_MotorHAT.FORWARD, Adafruit_MotorHAT.MICROSTEP)
+    while detect(endstop_pins[0])==0:
+        LinearMotor.oneStep(Adafruit_MotorHAT.FORWARD, Adafruit_MotorHAT.INTERLEAVE)
+    while detect(endstop_pins[0])==1:
+        LinearMotor.oneStep(Adafruit_MotorHAT.FORWARD, Adafruit_MotorHAT.INTERLEAVE)
     turnOffMotors()
     print ("linear platform reset")
 
@@ -77,51 +73,65 @@ def take_picture_cameras(file):
     GPIO.output(camera_pins[2],True)
     timestr1 = time.strftime("/C1_D%Y_%m_%d-T%H_%M_%S")
     #make_dir=time.strftime("Camera1_D_%Y_%m_%d_T_%H_%M")
-    capture1="raspistill -o %s.jpg" % (file+timestr1)
+    capture1="raspistill -t 500 -st -o %s.jpg" % (file+timestr1)
     os.system(capture1)
     print("Camera 1 Capture Succesful")
     GPIO.output(camera_pins[0],True)
     GPIO.output(camera_pins[1],False)
     GPIO.output(camera_pins[2],True)
     timestr2 = time.strftime("/C2_D%Y_%m_%d-T%H_%M_%S")
-    capture2 = "raspistill -o %s.jpg" % (file+timestr2)
+    capture2 = "raspistill -t 500 -st -o %s.jpg" % (file+timestr2)
     os.system(capture2)
     print("Camera 2 Capture Successful")
 
+def rotate_steps(n_steps):
+    for i in range(int(n_steps)):
+        RotaryMotor.oneStep(Adafruit_MotorHAT.FORWARD,Adafruit_MotorHAT.MICROSTEP)
+
 def rotate_vial(interval):
-    for i in interval:
-        RotaryMotor.oneStep(Adafruit_MotorHAT.FORWARD, Adafruit_MotorHAT.MICROSTEP)
-        print ("vial rotated by", interval)
+    rotate_steps(interval)
+    turnOffMotors()
+    print ("vial rotated by", interval)
+
+def rotate_reset():
+    for i in range(int(1600)):
+        RotaryMotor.oneStep(Adafruit_MotorHAT.BACKWARD, Adafruit_MotorHAT.MICROSTEP)
+    print("Vial Rotated to Reset")
 
 ## ------------------- ##
 
 def input_cmd(): ## returns object with parameters
-	n_vials = int(input("Number of Vials (6 or less): "))
-	steps = int(input("Number of pictures per vial: "))
-	time = float(input("Length of Operation (mins): "))
-	n_reps = int(input("Number of repetitions in length of operation: "))
-    store_path = str(input("Path: "))
+    n_vials = int(input("Number of Vials (6 or less): "))
+    steps = int(input("Number of pictures per vial: "))
+    time = float(input("Length of Operation (mins): "))
+    n_reps = int(input("Number of repetitions in length of operation: "))
+    store_path = str(raw_input("Path (folder in home dir): "))
 
-	return ob.Operation_Input(n_vials, steps, time, n_reps, store_path)
-_
+    return ob.Operation_Input(n_vials, steps, time, n_reps, store_path)
+
 def root_file_gen(newpath):
-    root_folder = time.strftime("/Run_%Y_%m_%d-%H:%M")
-    if not os.path.exists(newpath + root_folder):
-        os.makedirs(newpath + root_folder)
+    root_folder = time.strftime("Run_%Y_%m_%d-%H:%M")
+    newpath = os.path.join(os.path.expanduser('~'), newpath, root_folder)
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
 
-    return (newpath + rootfolder)
+    return (newpath)
 
 def vial_file_gen(rootpath, n_vial):
-    vial_folder = ("/Vial_" + str(n_vial))
-    if not os.path.exists(rootpath + vial_folder):
-        os.makedirs(rootpath + vial_folder)
+    vial_folder = ("Vial_" + str(n_vial))
+    rootpath = os.path.join(rootpath, vial_folder)
+    if not os.path.exists(rootpath):
+        os.makedirs(rootpath)
 
-    return (rootpath + vial_folder)
+    return (rootpath)
 
-def run_file_gen(vialpath, n_run)
-    run_folder = ("/Time_" + str(n_run))
-    if not os.path.exists(vialpath + run_folder):
-        os.makedirs(vialpath + run_folder)
+def run_file_gen(vialpath, n_run):
+    run_folder = ("Time_" + str(n_run))
+    vialpath = os.path.join(vialpath, run_folder)
+    if not os.path.exists(vialpath):
+        os.makedirs(vialpath)
+    
+    return (vialpath)
 
 
 def operation(input_ob):
@@ -129,26 +139,31 @@ def operation(input_ob):
 	steps = input_ob.steps
 	time = input_ob.time
 	n_reps = input_ob.n_reps
-    rootpath = root_file_gen(input_ob.store_path)
-	interval = math.floor(200 / steps)
+        rootpath = root_file_gen(input_ob.store_path)
+	interval = math.floor(1600 / steps)
+	remainder = 1600 - (steps * interval)
+	reset_linear_platform()
 	for i in range(n_vials):
-        vialpath = vial_file_gen(rootpath, n_vials + 1)    
-        next_endstop_number=2+i
-        for j in range(steps):
-            runpath = run_file_gen(vialpath, steps + 1)
-            take_picture_cameras(runpath)
-            rotate_vial(interval)
+            vialpath = vial_file_gen(rootpath, n_vials + 1)    
+            next_endstop_number=2+i
+            for j in range(steps):
+                runpath = run_file_gen(vialpath, steps + 1)
+                take_picture_cameras(runpath)
+                rotate_vial(interval)
             if i == n_vials-1:
                 reset_linear_platform()
             else:
-                move_linear_platform(next_endstop_number)	
+                move_linear_platform(next_endstop_number)
+            for k in range(int(remainder)):
+                RotaryMotor.oneStep(Adafruit_MotorHAT.FORWARD, Adafruit_MotorHAT.MICROSTEP)
+            rotate_reset()
 	print ("rep complete")
 
 def main():
-	input_ob = input_cmd()
-	periodic_scheduler = ob.Periodic_Scheduler(input_ob)
-	periodic_scheduler.setup(60.0 * input_ob.time / float(input_ob.n_reps), operation, input_ob)
-	periodic_scheduler.run()
+    input_ob = input_cmd()
+    periodic_scheduler = ob.Periodic_Scheduler(input_ob)
+    periodic_scheduler.setup(60.0 * input_ob.time / float(input_ob.n_reps), operation, input_ob)
+    periodic_scheduler.run()
 
 if __name__ == '__main__':
-	main()
+    main()

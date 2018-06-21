@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import Adafruit_MotorHAT, Adafruit_Stepper
+#import Adafruit_MotorHAT, Adafruit_Stepper
 from Adafruit_MotorHAT import Adafruit_MotorHAT, Adafruit_StepperMotor
 
 import time
@@ -13,10 +13,10 @@ def turnOffMotors():
         mh.getMotor(3).run(Adafruit_MotorHAT.RELEASE)
         mh.getMotor(4).run(Adafruit_MotorHAT.RELEASE)
  
-atexit.register(turnOffMotors)
+#atexit.register(turnOffMotors)
 
-stepper1 = mh.getStepper(200,1)
+#stepper1 = mh.getStepper(200,1)
 
-stepper1.oneStep(FORWARD, MICROSTEP)
+#stepper1.oneStep(FORWARD, MICROSTEP)
 
         
